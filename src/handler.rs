@@ -3,14 +3,14 @@ use thirtyfour::{WebDriver, By};
 use crate::scrapper::{find_name_link, release_date, img_src};
 
 #[derive(Debug, Default)]
-pub struct Anime {
-    name: String,
+pub struct AnimeList {
+    pub name: String,
     link: String,
-    imgsrc: String,
-    releasedate: String,
+    pub imgsrc: String,
+    pub releasedate: String,
 }
 
-impl Anime {
+impl AnimeList {
     pub fn name(&mut self, name: &str) -> &mut Self {
         self.name = name.to_string();
         self
@@ -33,11 +33,19 @@ impl Anime {
 }
 
 pub async fn scrap_now(url: String, driver: WebDriver) -> Result<WebDriver, Box<dyn std::error::Error>> {
-    let mut anime_list: Vec<Anime> = vec![];
+    //data
+    let mut anime_list: Vec<AnimeList> = vec![];
      
     //navigate to gogoanime website
     driver.get(url).await.expect("error in navigating to website");
-
+/*
+    //find pages
+    let page_element = driver.find_element(By::ClassName("pagination-list")).await.expect("error searching for page");
+    let page_list = page_element.find_elements(By::Tag("li")).await.expect("error searching for list tag");
+    let pages = page_list.len();
+    let mut current_page: usize = 1;
+*/
+    
     //go into items
     let items = driver.find_element(By::ClassName("items")).await.expect("error searching for item list");
 
@@ -45,7 +53,7 @@ pub async fn scrap_now(url: String, driver: WebDriver) -> Result<WebDriver, Box<
     let list = items.find_elements(By::Tag("li")).await.expect("cannot find list tag");
     
     for info in list {
-        let mut anime = Anime::default();
+        let mut anime = AnimeList::default();
 
         //name & link
         let name_link = find_name_link(info.clone()).await.expect("error finding name or link");
@@ -62,6 +70,8 @@ pub async fn scrap_now(url: String, driver: WebDriver) -> Result<WebDriver, Box<
     }
 
     println!("{:#?}", anime_list);
+
+    //println!("{:#?}", anime_list);
 
     Ok(driver)
 }
