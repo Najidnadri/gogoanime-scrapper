@@ -2,6 +2,10 @@ use thirtyfour::{WebDriver, By};
 
 use crate::scrapper::{find_name_link, release_date, img_src};
 
+pub struct AnimeInfo {
+    
+}
+
 #[derive(Debug, Default)]
 pub struct AnimeList {
     pub name: String,
