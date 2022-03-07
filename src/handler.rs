@@ -1,4 +1,5 @@
 use thirtyfour::{WebDriver, By};
+use serde::{self, Deserialize, Serialize};
 
 use crate::scrapper::{find_name_link, release_date, img_src};
 
@@ -6,7 +7,7 @@ pub struct AnimeInfo {
     
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 pub struct AnimeList {
     pub name: String,
     link: String,
@@ -36,9 +37,12 @@ impl AnimeList {
     }
 }
 
-pub async fn scrap_now(url: String, driver: WebDriver) -> Result<WebDriver, Box<dyn std::error::Error>> {
+pub async fn search_keyword(keyword: String, driver: WebDriver) -> Result<Vec<AnimeList>, Box<dyn std::error::Error>> {
     //data
     let mut anime_list: Vec<AnimeList> = vec![];
+
+    let keyword = keyword.replace(" ", "%20");
+    let url = format!("https://gogoanime.fan//search.html?keyword={}", keyword);
      
     //navigate to gogoanime website
     driver.get(url).await.expect("error in navigating to website");
@@ -73,9 +77,10 @@ pub async fn scrap_now(url: String, driver: WebDriver) -> Result<WebDriver, Box<
         anime_list.push(anime);
     }
 
+    driver.quit().await.unwrap();
     println!("{:#?}", anime_list);
 
     //println!("{:#?}", anime_list);
 
-    Ok(driver)
+    Ok(anime_list)
 }
