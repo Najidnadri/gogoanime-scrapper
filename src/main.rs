@@ -1,7 +1,7 @@
 mod scrapper;
 mod handler;
 
-use std::net::TcpListener;
+use std::{net::TcpListener};
 use serde::{self, Deserialize, Serialize};
 use handler::{AnimeList, handle_client, AnimeInfo};
 use tokio;
@@ -34,6 +34,26 @@ async fn main() -> WebDriverResult<()>  {
     };
 
     let result = find_anime_info(driver, anime).await;
+    */
+
+    /* 
+    //test for finding animelist
+    let keyword = "isekai".to_string();
+    let mut caps = DesiredCapabilities::chrome();
+    //caps.set_headless().unwrap();
+    caps.add_chrome_option(
+        "prefs",
+        serde_json::json!({
+            "profile.default_content_settings": {
+                "images": 2
+            },
+            "profile.managed_default_content_settings": {
+                "images": 2
+            }
+        }),
+    ).unwrap();
+    let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
+    let result = search_keyword(keyword, driver).await.unwrap();
     */
 
 

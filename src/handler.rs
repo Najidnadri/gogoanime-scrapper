@@ -1,4 +1,4 @@
-use std::{net::TcpStream, io::{Read, BufWriter, Write}};
+use std::{net::TcpStream, io::{Read, BufWriter, Write}, time::Duration};
 
 use thirtyfour::{WebDriver, By, DesiredCapabilities};
 use serde::{self, Deserialize, Serialize};
@@ -83,6 +83,9 @@ pub async fn search_keyword(keyword: String, driver: WebDriver) -> Result<Vec<An
      
     //navigate to gogoanime website
     driver.get(url).await.expect("error in navigating to website");
+    println!("after get url");
+
+    
 /*
     //find pages
     let page_element = driver.find_element(By::ClassName("pagination-list")).await.expect("error searching for page");
@@ -117,7 +120,7 @@ pub async fn search_keyword(keyword: String, driver: WebDriver) -> Result<Vec<An
     driver.quit().await.unwrap();
     println!("{:#?}", anime_list);
 
-    //println!("{:#?}", anime_list);
+    println!("{:#?}", anime_list);
 
     Ok(anime_list)
 }
@@ -190,11 +193,22 @@ pub async fn handle_client(stream: TcpStream) {
         loop {
 
             let mut stream = stream.try_clone().unwrap();
-            let mut data = [0 as u8; 5000];
+            let mut data = [0 as u8; 10000];
             match stream.read(&mut data) {
                 Ok(_size) => {
-                    let caps = DesiredCapabilities::chrome();
-                    let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
+                    let mut caps = DesiredCapabilities::chrome();
+                    caps.add_chrome_option(
+                        "prefs",
+                        serde_json::json!({
+                            "profile.default_content_settings": {
+                                "images": 2
+                            },
+                            "profile.managed_default_content_settings": {
+                                "images": 2
+                            }
+                        }),
+                    ).unwrap();
+                    let driver = WebDriver::new_with_timeout("http://localhost:9515", &caps, Some(Duration::from_secs(10))).await.unwrap();
                     let request = eliminate_zero(data);
                     let deserialized_request: ClientRequest = serde_json::from_str(&request).unwrap();
 
@@ -212,7 +226,7 @@ pub async fn handle_client(stream: TcpStream) {
     });
 }
 
-fn eliminate_zero(data: [u8; 5000]) -> String {
+fn eliminate_zero(data: [u8; 10000]) -> String {
     let mut new_data: Vec<u8> = Vec::new();
     for i in data {
         if i == 0 {
