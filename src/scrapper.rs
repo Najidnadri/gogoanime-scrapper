@@ -27,7 +27,7 @@ pub async fn img_src(element: WebElement<'_>) -> Result<String, Box<dyn std::err
     Ok(src)
 }
 
-fn href_link(html: String) -> String {
+pub fn href_link(html: String) -> String {
     let mut n: usize = 0;
     let mut quote_location = vec![];
     for i in html.chars() {
