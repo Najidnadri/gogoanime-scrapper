@@ -1,7 +1,9 @@
 mod scrapper;
 mod handler;
+mod error;
 
 use std::{net::TcpListener};
+use error::AppError;
 use serde::{self, Deserialize, Serialize};
 use handler::{AnimeList, handle_client, AnimeInfo};
 use tokio;
@@ -17,7 +19,8 @@ enum ClientRequest {
 enum ServerResponse {
     AnimeSearch(Vec<AnimeList>),
     AnimeInfo(AnimeInfo),
-    Err,
+    Err(AppError),
+    None,
 }
 
 #[tokio::main]
@@ -58,11 +61,13 @@ async fn main() -> WebDriverResult<()>  {
 
 
     //create server for front end
-    let listener = TcpListener::bind("127.0.0.1:4040").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:4040")
+    .map_err(|_e| AppError::BindErr)
+    .unwrap();
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
-            handle_client(stream).await
+            handle_client(stream).await.unwrap()
         }
     }
     Ok(())
