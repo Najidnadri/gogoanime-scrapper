@@ -2,7 +2,7 @@ mod scrapper;
 mod handler;
 mod error;
 
-use std::{net::TcpListener};
+use std::net::TcpListener;
 use error::AppError;
 use serde::{self, Deserialize, Serialize};
 use handler::{AnimeList, handle_client, AnimeInfo};
@@ -27,7 +27,18 @@ enum ServerResponse {
 async fn main() -> WebDriverResult<()>  {
     //test for find anime info
     /* 
-    let caps = DesiredCapabilities::chrome();
+    let mut caps = DesiredCapabilities::chrome();
+    caps.add_chrome_option(
+        "prefs",
+        serde_json::json!({
+            "profile.default_content_settings": {
+                "images": 2
+            },
+            "profile.managed_default_content_settings": {
+                "images": 2
+            }
+        }),
+    ).unwrap();
     let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
     let anime = AnimeList {
         name: String::from("Hakuouki"),
@@ -36,7 +47,7 @@ async fn main() -> WebDriverResult<()>  {
         releasedate: String::from("Released: 2010"),
     };
 
-    let result = find_anime_info(driver, anime).await;
+    let result = find_anime_info(driver, anime).await.unwrap();
     */
 
     /* 
@@ -57,6 +68,27 @@ async fn main() -> WebDriverResult<()>  {
     ).unwrap();
     let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
     let result = search_keyword(keyword, driver).await.unwrap();
+    */
+    /* 
+    let mut caps = DesiredCapabilities::chrome();
+    caps.add_chrome_option(
+        "prefs",
+        serde_json::json!({
+            "profile.default_content_settings": {
+                "images": 2
+            },
+            "profile.managed_default_content_settings": {
+                "images": 2
+            }
+        }),
+    ).unwrap();
+    let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
+    let episode = EpisodeInfo {
+        episode: "EP 2".to_string(),
+        link: " /hakuouki-episode-10".to_string(),
+    };
+
+    let result = anime_video(episode, driver).await.unwrap();
     */
 
 

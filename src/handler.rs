@@ -4,6 +4,27 @@ use serde::{self, Deserialize, Serialize};
 use crate::{error::AppError, ClientRequest, ServerResponse, scrapper::{search_keyword, find_anime_info}};
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct Anime {
+    pub name: String,
+    pub server_list: Vec<Server>,
+}
+
+impl Anime {
+    pub fn new() -> Self {
+        Anime {
+            name: String::new(),
+            server_list: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Server {
+    pub name: String,
+    pub link: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AnimeInfo {
     pub imgsrc: String,
     pub name: String,

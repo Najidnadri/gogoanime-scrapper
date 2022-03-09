@@ -1,9 +1,73 @@
 
 use thirtyfour::{self, WebElement, By, WebDriver};
 
-use crate::{error::{AppError, ScrapError}, handler::{EpisodeInfo, AnimeList, AnimeInfo}};
+use crate::{error::{AppError, ScrapError}, handler::{EpisodeInfo, AnimeList, AnimeInfo, Anime, Server}};
 
 pub const BASE_URL: &str = "https://gogoanime.fan";
+
+pub async fn anime_video(episode_info: EpisodeInfo, driver: WebDriver) -> Result<Anime, AppError> {
+    let mut anime: Anime = Anime::new();
+    let url = format!("{}{}", BASE_URL, episode_info.link.trim());
+
+    //navigate to gogoanime website
+    driver.get(url.clone())
+    .await
+    .map_err(|_e| AppError::ScrapErr(ScrapError::ErrNavigateUrl(url)))
+    .unwrap();
+
+    //name
+    let title_class = driver.find_element(By::ClassName("title_name"))
+    .await
+    .map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindingClass("title_name".to_string())))
+    .unwrap();
+
+    anime.name = title_class.text()
+    .await
+    .map_err(|_e| AppError::ScrapErr(ScrapError::ErrTextParsing))
+    .unwrap();
+
+    //iframe link
+    
+
+    //servers
+    let mut servers = Vec::new();
+    let server_class = driver.find_element(By::ClassName("anime_muti_link"))
+    .await
+    .map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindingClass("anime_muti_link".to_string())))
+    .unwrap();
+    let server_element_list = server_class.find_elements(By::Tag("li"))
+    .await
+    .map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindingTag("li".to_string())))
+    .unwrap();
+
+    for i in server_element_list {
+        let mut server = Server {
+            name: String::new(),
+            link: String::new(),
+        };
+        
+        //server name
+        let class_name = i.class_name().await.map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindClassName)).unwrap().unwrap();
+        server.name = class_name;
+
+        //link
+        let html = i.inner_html()
+        .await
+        .map_err(|_e| AppError::ScrapErr(ScrapError::InnerHtmlErr))
+        .unwrap();
+        let link = video_link(html).await;
+        server.link = link;
+
+        servers.push(server);
+    }
+
+    anime.server_list = servers;
+    driver.quit().await.map_err(|_e| AppError::QuitDriverErr).unwrap();
+
+    println!("{:#?}", anime);
+
+    Ok(anime)
+}
 
 pub async fn search_keyword(keyword: String, driver: WebDriver) -> Result<Vec<AnimeList>, AppError> {
     //data
@@ -107,12 +171,15 @@ pub async fn find_anime_info(driver: WebDriver, anime: AnimeList) -> Result<Anim
             anime_info.status = element_text;
         }
     }
-
+    
+    
     //episodes
     let episodes_element = driver.find_element(By::Id("episode_related"))
     .await
     .map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindingId("episode_related".to_string())))
-    .unwrap()
+    .unwrap();
+
+    let episode_list = episodes_element
     .find_elements(By::Tag("li"))
     .await
     .map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindingTag("li".to_string())))
@@ -120,7 +187,7 @@ pub async fn find_anime_info(driver: WebDriver, anime: AnimeList) -> Result<Anim
 
     let mut episodes = Vec::new();
 
-    for i in episodes_element {
+    for i in episode_list {
         let mut episode = EpisodeInfo::new();
         let html = i.inner_html().await.map_err(|_e| AppError::ScrapErr(ScrapError::InnerHtmlErr)).unwrap();
         let episode_link = href_link(html).await;
@@ -136,7 +203,7 @@ pub async fn find_anime_info(driver: WebDriver, anime: AnimeList) -> Result<Anim
     }
     anime_info.episodes = episodes;
 
-    //println!("{:#?}", anime_info);
+    println!("{:#?}", anime_info);
 
     driver.quit().await.map_err(|_e| AppError::QuitDriverErr).unwrap();
 
@@ -204,6 +271,24 @@ async fn href_link(html: String) -> String {
     }
     let mut initial = html.find("href").unwrap();
     initial += 5;
+    let index = quote_location.iter().position(|&r| r == initial).unwrap();
+    let ending = quote_location[index + 1];
+
+    let result: String = html.clone().drain(initial + 1 .. ending).collect();
+    result
+}
+
+async fn video_link(html: String) -> String {
+    let mut n: usize = 0;
+    let mut quote_location = vec![];
+    for i in html.chars() {
+        if i == '"' {
+            quote_location.push(n);
+        }
+        n += 1;
+    }
+    let mut initial = html.find("data-video").unwrap();
+    initial += 11;
     let index = quote_location.iter().position(|&r| r == initial).unwrap();
     let ending = quote_location[index + 1];
 

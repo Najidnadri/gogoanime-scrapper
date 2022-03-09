@@ -23,4 +23,5 @@ pub enum ScrapError {
     InnerHtmlErr,
     ErrNavigateUrl(String),
     ErrFindingId(String),
+    ErrFindClassName,
 }
