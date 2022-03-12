@@ -2,12 +2,14 @@ mod scrapper;
 mod handler;
 mod error;
 
-use std::net::TcpListener;
+
+use actix_web::{web, Responder, HttpServer, App, get, HttpResponse};
 use error::AppError;
+use scrapper::{search_keyword};
 use serde::{self, Deserialize, Serialize};
-use handler::{AnimeList, handle_client, AnimeInfo};
-use tokio;
-use thirtyfour::{self, prelude::WebDriverResult};
+use handler::{AnimeList, AnimeInfo, Anime};
+use thirtyfour::{self, DesiredCapabilities, WebDriver};
+use crate::{scrapper::{anime_video, find_anime_info}, handler::EpisodeInfo};
 
 #[derive(Debug, Deserialize, Serialize)]
 enum ClientRequest {
@@ -19,12 +21,13 @@ enum ClientRequest {
 enum ServerResponse {
     AnimeSearch(Vec<AnimeList>),
     AnimeInfo(AnimeInfo),
+    Anime(Anime),
     Err(AppError),
     None,
 }
 
-#[tokio::main]
-async fn main() -> WebDriverResult<()>  {
+#[actix_web::main]
+async fn main() -> Result<(), std::io::Error>  {
     //test for find anime info
     /* 
     let mut caps = DesiredCapabilities::chrome();
@@ -93,14 +96,92 @@ async fn main() -> WebDriverResult<()>  {
 
 
     //create server for front end
-    let listener = TcpListener::bind("127.0.0.1:4040")
-    .map_err(|_e| AppError::BindErr)
+    HttpServer::new(|| {
+        App::new()
+        .service(search)
+        .service(video)
+        .service(anime_info)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
+    
+}
+
+#[get("/search/{keyword}")]
+async fn search(path: web::Path<String>) -> impl Responder {
+    let mut caps = DesiredCapabilities::chrome();
+    caps.add_chrome_option(
+        "prefs",
+        serde_json::json!({
+            "profile.default_content_settings": {
+                "images": 2
+            },
+            "profile.managed_default_content_settings": {
+                "images": 2
+            }
+        }),
+    ).map_err(|_e| AppError::ChromeOptionErr).unwrap();
+    let driver = WebDriver::new("http://localhost:9515", &caps)
+    .await
+    .map_err(|_e| AppError::CreateWebDriverErr)
     .unwrap();
 
-    for stream in listener.incoming() {
-        if let Ok(stream) = stream {
-            handle_client(stream).await.unwrap()
-        }
-    }
-    Ok(())
+    let keyword = path.into_inner();
+    let response = search_keyword(keyword, driver).await.unwrap();
+    let server_response = ServerResponse::AnimeSearch(response);
+
+    HttpResponse::Ok().json(server_response)
+}
+
+#[get("/anime")]
+async fn video(body: web::Json<EpisodeInfo>) -> impl Responder {
+    let mut caps = DesiredCapabilities::chrome();
+    caps.add_chrome_option(
+        "prefs",
+        serde_json::json!({
+            "profile.default_content_settings": {
+                "images": 2
+            },
+            "profile.managed_default_content_settings": {
+                "images": 2
+            }
+        }),
+    ).map_err(|_e| AppError::ChromeOptionErr).unwrap();
+    let driver = WebDriver::new("http://localhost:9515", &caps)
+    .await
+    .map_err(|_e| AppError::CreateWebDriverErr)
+    .unwrap();
+
+    let episode = body.into_inner();
+    let response = anime_video(episode, driver).await.unwrap();
+    let server_response = ServerResponse::Anime(response);
+
+    HttpResponse::Ok().json(server_response)
+}
+
+#[get("/anime-info")]
+async fn anime_info(body: web::Json<AnimeList>) -> impl Responder {
+    let mut caps = DesiredCapabilities::chrome();
+    caps.add_chrome_option(
+        "prefs",
+        serde_json::json!({
+            "profile.default_content_settings": {
+                "images": 2
+            },
+            "profile.managed_default_content_settings": {
+                "images": 2
+            }
+        }),
+    ).map_err(|_e| AppError::ChromeOptionErr).unwrap();
+    let driver = WebDriver::new("http://localhost:9515", &caps)
+    .await
+    .map_err(|_e| AppError::CreateWebDriverErr)
+    .unwrap();
+
+    let anime = body.into_inner();
+    let response = find_anime_info(driver, anime).await.unwrap();
+    let server_response = ServerResponse::AnimeInfo(response);
+
+    HttpResponse::Ok().json(server_response)
 }

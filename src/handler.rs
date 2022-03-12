@@ -1,7 +1,5 @@
-use std::{net::TcpStream, io::{Read, BufWriter, Write}};
-use thirtyfour::{WebDriver, DesiredCapabilities};
 use serde::{self, Deserialize, Serialize};
-use crate::{error::AppError, ClientRequest, ServerResponse, scrapper::{search_keyword, find_anime_info}};
+
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Anime {
@@ -93,8 +91,8 @@ impl AnimeList {
 
 
 //the real handler starts here
-
-pub async fn handle_client(stream: TcpStream) -> Result<(), AppError> {
+/* 
+pub async fn _handle_client(stream: TcpStream) -> Result<(), AppError> {
     tokio::spawn(async move {
         loop {
 
@@ -138,7 +136,7 @@ pub async fn handle_client(stream: TcpStream) -> Result<(), AppError> {
     Ok(())
 }
 
-fn eliminate_zero(data: [u8; 10000]) -> Result<String, AppError> {
+fn _eliminate_zero(data: [u8; 10000]) -> Result<String, AppError> {
     let mut new_data: Vec<u8> = Vec::new();
     for i in data {
         if i == 0 {
@@ -150,7 +148,7 @@ fn eliminate_zero(data: [u8; 10000]) -> Result<String, AppError> {
     Ok(String::from_utf8(new_data).unwrap())
 }
 
-async fn process_request(request: ClientRequest, driver: WebDriver) -> ServerResponse {
+async fn _process_request(request: ClientRequest, driver: WebDriver) -> ServerResponse {
     let mut _server_response: ServerResponse = ServerResponse::None;
     match request {
         ClientRequest::Anime(s) => {
@@ -181,7 +179,7 @@ async fn process_request(request: ClientRequest, driver: WebDriver) -> ServerRes
     return _server_response
 }
 
-async fn send_response(response: ServerResponse, stream: &TcpStream) {
+async fn _send_response(response: ServerResponse, stream: &TcpStream) {
     let serialized_response = serde_json::to_string(&response)
     .map_err(|_e| AppError::SerializeErr)
     .unwrap();
@@ -195,3 +193,4 @@ async fn send_response(response: ServerResponse, stream: &TcpStream) {
     .unwrap();
     println!("After write");
 }
+*/
