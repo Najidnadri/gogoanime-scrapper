@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use thirtyfour::error::WebDriverError;
 
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -7,7 +8,7 @@ pub enum AppError {
     ScrapErr(ScrapError),
     TcpStreamCloneErr,
     ChromeOptionErr,
-    CreateWebDriverErr,
+    CreateWebDriverErr(usize),
     DeserializeErr,
     SerializeErr,
     WriteErr,

@@ -640,8 +640,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "gogoanime-scrapper"
-version = "0.1.0"
+name = "gogoanimescrapper"
+version = "0.1.59"
 dependencies = [
  "actix-web",
  "reqwest",

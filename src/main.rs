@@ -42,13 +42,14 @@ async fn main() -> Result<(), std::io::Error>  {
             }
         }),
     ).unwrap();
-    let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
+    let driver = WebDriver::new("http://localhost:3000", &caps).await.unwrap();
     let anime = AnimeList {
         name: String::from("Hakuouki"),
         link: String::from("/category/hakuouki"),
         imgsrc: String::from("https://gogocdn.net/cover/hakuouki.png"),
         releasedate: String::from("Released: 2010"),
     };
+    
 
     let result = find_anime_info(driver, anime).await.unwrap();
     */
@@ -69,7 +70,7 @@ async fn main() -> Result<(), std::io::Error>  {
             }
         }),
     ).unwrap();
-    let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
+    let driver = WebDriver::new("http://localhost:4444", &caps).await.unwrap();
     let result = search_keyword(keyword, driver).await.unwrap();
     */
     /* 
@@ -85,7 +86,7 @@ async fn main() -> Result<(), std::io::Error>  {
             }
         }),
     ).unwrap();
-    let driver = WebDriver::new("http://localhost:9515", &caps).await.unwrap();
+    let driver = WebDriver::new("http://localhost:4444", &caps).await.unwrap();
     let episode = EpisodeInfo {
         episode: "EP 2".to_string(),
         link: " /hakuouki-episode-10".to_string(),
@@ -96,20 +97,30 @@ async fn main() -> Result<(), std::io::Error>  {
 
 
     //create server for front end
+    println!("actix web go!");
+
     HttpServer::new(|| {
         App::new()
         .service(search)
         .service(video)
         .service(anime_info)
+        .service(greet)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
     
 }
 
+#[get("/hello/{name}")]
+async fn greet(name: web::Path<String>) -> impl Responder {
+    let name_s = name.into_inner();
+    format!("hello, your name is {}", name_s)
+}
+
 #[get("/search/{keyword}")]
 async fn search(path: web::Path<String>) -> impl Responder {
+    println!("updated 2");
     let mut caps = DesiredCapabilities::chrome();
     caps.add_chrome_option(
         "prefs",
@@ -122,9 +133,9 @@ async fn search(path: web::Path<String>) -> impl Responder {
             }
         }),
     ).map_err(|_e| AppError::ChromeOptionErr).unwrap();
-    let driver = WebDriver::new("http://localhost:9515", &caps)
+    let driver = WebDriver::new("https://muhdnajid_NLtuzJ:ZfHis32tES2Wmddcyvzv@hub-cloud.browserstack.com/wd/hub", &caps)
     .await
-    .map_err(|_e| AppError::CreateWebDriverErr)
+    //.map_err(|_e| AppError::CreateWebDriverErr(4442))
     .unwrap();
 
     let keyword = path.into_inner();
@@ -148,9 +159,9 @@ async fn video(body: web::Json<EpisodeInfo>) -> impl Responder {
             }
         }),
     ).map_err(|_e| AppError::ChromeOptionErr).unwrap();
-    let driver = WebDriver::new("http://localhost:9515", &caps)
+    let driver = WebDriver::new("https://muhdnajid_NLtuzJ:ZfHis32tES2Wmddcyvzv@hub-cloud.browserstack.com/wd/hub", &caps)
     .await
-    .map_err(|_e| AppError::CreateWebDriverErr)
+    .map_err(|e| AppError::CreateWebDriverErr(4442))
     .unwrap();
 
     let episode = body.into_inner();
@@ -174,9 +185,9 @@ async fn anime_info(body: web::Json<AnimeList>) -> impl Responder {
             }
         }),
     ).map_err(|_e| AppError::ChromeOptionErr).unwrap();
-    let driver = WebDriver::new("http://localhost:9515", &caps)
+    let driver = WebDriver::new("https://muhdnajid_NLtuzJ:ZfHis32tES2Wmddcyvzv@hub-cloud.browserstack.com/wd/hub", &caps)
     .await
-    .map_err(|_e| AppError::CreateWebDriverErr)
+    .map_err(|_e| AppError::CreateWebDriverErr(4442))
     .unwrap();
 
     let anime = body.into_inner();

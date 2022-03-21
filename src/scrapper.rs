@@ -122,7 +122,7 @@ pub async fn search_keyword(keyword: String, driver: WebDriver) -> Result<Vec<An
     }
 
     driver.quit().await.map_err(|_e| AppError::QuitDriverErr).unwrap();
-    println!("{:#?}", anime_list);
+    //println!("{:#?}", anime_list);
 
     println!("{:#?}", anime_list);
 
