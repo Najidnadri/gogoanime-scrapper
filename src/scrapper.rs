@@ -5,9 +5,58 @@ use crate::{error::{AppError, ScrapError}, handler::{EpisodeInfo, AnimeList, Ani
 
 pub const BASE_URL: &str = "https://gogoanime.fan";
 
-pub async fn anime_video(episode_info: EpisodeInfo, driver: WebDriver) -> Result<Anime, AppError> {
+pub async fn find_latest_episodes(driver: WebDriver) -> Result<Vec<AnimeList>, AppError> {
+    let url = format!("{}/home", BASE_URL);
+    let mut anime_list: Vec<AnimeList> = Vec::new();
+
+    //navigate to gogoanime website
+    match driver.get(&url).await {
+        Ok(_) => (),
+        Err(_) => return Err(AppError::ScrapErr(ScrapError::ErrNavigateUrl(url))),
+    }
+
+    //go to items class
+    let items_class = driver.find_element(By::ClassName("items")).await.unwrap();
+    let list = items_class.find_elements(By::Tag("li")).await.unwrap();
+
+    //println!("{:#?}", list);
+
+    for info in list {
+        let mut anime = AnimeList::default();
+
+        //name & link
+        let name_link = find_name_link(info.clone()).await.unwrap();
+        anime.name(&name_link[0]);
+        anime.link(&name_link[1]);
+
+        //imgsrc
+        match img_src(info).await {
+            Ok(s) => {
+                anime.imgsrc(s);
+            },
+            Err(e) => {
+                match e {
+                    ScrapError::ErrFindingImage(s) => {
+                        println!("err finding imgrsrc: {}", s);
+                    },
+                    _ => {},
+                }
+            },
+        }
+
+        anime_list.push(anime);
+    }
+
+    driver.quit().await.map_err(|_e| AppError::QuitDriverErr).unwrap();
+
+    println!("{:#?}", anime_list);
+
+    Ok(anime_list)
+}
+
+pub async fn anime_video(episode_link: String, driver: WebDriver) -> Result<Anime, AppError> {
     let mut anime: Anime = Anime::new();
-    let url = format!("{}{}", BASE_URL, episode_info.link.trim());
+    let url = format!("{}/{}", BASE_URL, episode_link.trim());
 
     //navigate to gogoanime website
     driver.get(url.clone())
@@ -129,21 +178,30 @@ pub async fn search_keyword(keyword: String, driver: WebDriver) -> Result<Vec<An
     Ok(anime_list)
 }
 
-pub async fn find_anime_info(driver: WebDriver, anime: AnimeList) -> Result<AnimeInfo, AppError> {
-    let url = format!("{}{}", BASE_URL, anime.link);
+pub async fn find_anime_info(driver: WebDriver, anime_link: String) -> Result<AnimeInfo, AppError> {
+    let url = format!("{}/category/{}", BASE_URL, anime_link.trim());
     let mut anime_info: AnimeInfo = AnimeInfo::new();
 
     //navigate to gogoanime website
     driver.get(url.clone()).await.map_err(|_e| AppError::ScrapErr(ScrapError::ErrNavigateUrl(url))).unwrap();
 
     //imgsrc
-    anime_info.imgsrc = anime.imgsrc;
+    //anime_info.imgsrc = anime.imgsrc;
 
     //name
-    anime_info.name = anime.name;
+    let name_element = driver.find_element(By::ClassName("anime_info_episodes"))
+    .await
+    .unwrap();
+    let anime_name = name_element.find_element(By::Tag("h2"))
+    .await
+    .unwrap()
+    .text()
+    .await
+    .unwrap();
+    anime_info.name = anime_name;
 
     //released
-    anime_info.released = anime.releasedate;
+    //anime_info.released = anime.releasedate;
 
     //description, genre, status
     let anime_info_body = driver.find_element(By::ClassName("anime_info_body_bg"))
@@ -154,6 +212,7 @@ pub async fn find_anime_info(driver: WebDriver, anime: AnimeList) -> Result<Anim
     .await
     .map_err(|_e| AppError::ScrapErr(ScrapError::ErrFindingClass("type".to_string())))
     .unwrap();
+
 
     for i in anime_info_body {
         let mut element_text = i.text()
@@ -246,18 +305,24 @@ async fn release_date(element: WebElement<'_>) -> Result<String, AppError> {
     Ok(date)
 }
 
-async fn img_src(element: WebElement<'_>) -> Result<String, AppError> {
+async fn img_src(element: WebElement<'_>) -> Result<String, ScrapError> {
     let img_element = element.find_element(By::ClassName("img"))
     .await
-    .map_err(|_e| AppError::ScrapErr(ScrapError::ErrTextParsing))
+    .map_err(|_e| ScrapError::ErrTextParsing)
     .unwrap()
     .inner_html()
     .await
-    .map_err(|_e| AppError::ScrapErr(ScrapError::InnerHtmlErr))
+    .map_err(|_e| ScrapError::InnerHtmlErr)
     .unwrap();
 
-    let img_src = imgsrclink(img_element).await;
-    Ok(img_src)
+    let mut _result = String::new();
+
+    match imgsrclink(img_element).await {
+        Ok(s) => _result = s,
+        Err(e) => return Err(e),
+    }
+
+    Ok(_result)
 }
 
 async fn href_link(html: String) -> String {
@@ -296,7 +361,7 @@ async fn video_link(html: String) -> String {
     result
 }
 
-async fn imgsrclink(html: String) -> String {
+async fn imgsrclink(html: String) -> Result<String, ScrapError> {
     //location of all quote marks
     let mut n: usize = 0;
     let mut quote_location = vec![];
@@ -310,10 +375,19 @@ async fn imgsrclink(html: String) -> String {
     //location of the initial quote mark
     let mut initial = html.find("src").unwrap();
     initial += 4;
+    let mut _index = 0;
 
-    let index = quote_location.iter().position(|&r| r == initial).unwrap();
-    let ending = quote_location[index + 1];
+    match quote_location.iter().position(|&r| r == initial) {
+        Some(n) => {
+            _index = n;
+        },
+        None => {
+            return Err(ScrapError::ErrFindingImage(html));
+        },
+    }
+
+    let ending = quote_location[_index + 1];
 
     let result: String = html.clone().drain(initial + 1 .. ending).collect();
-    result
+    Ok(result)
 }

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use thirtyfour::error::WebDriverError;
+
 
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -25,4 +25,5 @@ pub enum ScrapError {
     ErrNavigateUrl(String),
     ErrFindingId(String),
     ErrFindClassName,
+    ErrFindingImage(String),
 }
